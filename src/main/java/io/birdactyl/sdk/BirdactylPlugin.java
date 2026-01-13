@@ -19,7 +19,7 @@ public abstract class BirdactylPlugin {
     private String name;
     private final String version;
     private final Map<String, Function<Event, EventResult>> eventHandlers = new ConcurrentHashMap<>();
-    private final Map<String, Function<Request, Response>> routeHandlers = new ConcurrentHashMap<>();
+    private final Map<String, RouteRegistration> routeHandlers = new ConcurrentHashMap<>();
     private final Map<String, Runnable> scheduleHandlers = new ConcurrentHashMap<>();
     private final Map<String, MixinRegistration> mixinHandlers = new ConcurrentHashMap<>();
     private final Map<String, AddonTypeRegistration> addonTypeHandlers = new ConcurrentHashMap<>();
@@ -54,6 +54,25 @@ public abstract class BirdactylPlugin {
             this.typeId = typeId; this.handler = handler;
         }
     }
+
+    private static class RouteRegistration {
+        final String method;
+        final String path;
+        final Function<Request, Response> handler;
+        String rateLimitPreset;
+        int rateLimitRPM;
+        int rateLimitBurst;
+
+        RouteRegistration(String method, String path, Function<Request, Response> handler) {
+            this.method = method;
+            this.path = path;
+            this.handler = handler;
+        }
+    }
+
+    public static final String PRESET_READ = "read";
+    public static final String PRESET_WRITE = "write";
+    public static final String PRESET_STRICT = "strict";
 
     @FunctionalInterface
     public interface AddonTypeHandler {
@@ -99,9 +118,53 @@ public abstract class BirdactylPlugin {
         eventHandlers.put(eventType, handler);
     }
 
-    public void route(String method, String path, Function<Request, Response> handler) {
-        routeHandlers.put(method + ":" + path, handler);
+    public RouteBuilder route(String method, String path, Function<Request, Response> handler) {
+        RouteRegistration reg = new RouteRegistration(method, path, handler);
+        routeHandlers.put(method + ":" + path, reg);
         routes.add(RouteInfo.newBuilder().setMethod(method).setPath(path).build());
+        return new RouteBuilder(reg, routes);
+    }
+
+    public class RouteBuilder {
+        private final RouteRegistration registration;
+        private final List<RouteInfo> routesList;
+
+        RouteBuilder(RouteRegistration registration, List<RouteInfo> routesList) {
+            this.registration = registration;
+            this.routesList = routesList;
+        }
+
+        public RouteBuilder rateLimit(int requestsPerMinute, int burstLimit) {
+            registration.rateLimitRPM = requestsPerMinute;
+            registration.rateLimitBurst = burstLimit;
+            updateRouteInfo();
+            return this;
+        }
+
+        public RouteBuilder rateLimitPreset(String preset) {
+            registration.rateLimitPreset = preset;
+            updateRouteInfo();
+            return this;
+        }
+
+        private void updateRouteInfo() {
+            routesList.removeIf(r -> r.getMethod().equals(registration.method) && r.getPath().equals(registration.path));
+            RouteInfo.Builder builder = RouteInfo.newBuilder()
+                    .setMethod(registration.method)
+                    .setPath(registration.path);
+            if (registration.rateLimitPreset != null || registration.rateLimitRPM > 0) {
+                RateLimitConfig.Builder rlBuilder = RateLimitConfig.newBuilder();
+                if (registration.rateLimitPreset != null) {
+                    rlBuilder.setPreset(registration.rateLimitPreset);
+                }
+                if (registration.rateLimitRPM > 0) {
+                    rlBuilder.setRequestsPerMinute(registration.rateLimitRPM);
+                    rlBuilder.setBurstLimit(registration.rateLimitBurst > 0 ? registration.rateLimitBurst : registration.rateLimitRPM);
+                }
+                builder.setRateLimit(rlBuilder.build());
+            }
+            routesList.add(builder.build());
+        }
     }
 
     public void schedule(String scheduleId, String cron, Runnable handler) {
@@ -345,20 +408,20 @@ public abstract class BirdactylPlugin {
     }
 
     private HTTPResponse handleHTTP(HTTPRequest request) {
-        Function<Request, Response> handler = routeHandlers.get(request.getMethod() + ":" + request.getPath());
-        if (handler == null) {
-            for (Map.Entry<String, Function<Request, Response>> entry : routeHandlers.entrySet()) {
+        RouteRegistration reg = routeHandlers.get(request.getMethod() + ":" + request.getPath());
+        if (reg == null) {
+            for (Map.Entry<String, RouteRegistration> entry : routeHandlers.entrySet()) {
                 String[] parts = entry.getKey().split(":", 2);
                 if ((parts[0].equals("*") || parts[0].equals(request.getMethod())) && matchPath(parts[1], request.getPath())) {
-                    handler = entry.getValue();
+                    reg = entry.getValue();
                     break;
                 }
             }
         }
 
         Response resp;
-        if (handler != null) {
-            resp = handler.apply(new Request(request));
+        if (reg != null) {
+            resp = reg.handler.apply(new Request(request));
         } else {
             resp = Response.error(404, "not found");
         }
