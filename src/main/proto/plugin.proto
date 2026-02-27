@@ -193,6 +193,8 @@ message PluginUIInfo {
   bool has_bundle = 1;
   repeated PluginUIPage pages = 2;
   repeated PluginUITab tabs = 4;
+  // NOTE: These render as top navigation bar items (not a sidebar).
+  // Field name kept as sidebar_items for wire compatibility.
   repeated PluginUISidebarItem sidebar_items = 5;
   bytes bundle_data = 6;
 }
@@ -214,6 +216,8 @@ message PluginUITab {
   int32 order = 6;
 }
 
+// Navigation item displayed in the top bar.
+// Named "Sidebar" in proto for wire compatibility; previously was a sidebar.
 message PluginUISidebarItem {
   string id = 1;
   string label = 2;
