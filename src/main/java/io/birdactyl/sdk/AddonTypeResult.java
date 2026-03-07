@@ -95,8 +95,13 @@ public class AddonTypeResult {
             return new Action(WRITE_FILE, null, path, content, null, null, null, null);
         }
 
+        public static Action runCommand(String command) {
+            return new Action(RUN_COMMAND, null, null, null, command, null, null, null);
+        }
+
         public static Action proxyToNode(String endpoint, byte[] payload) {
             return new Action(PROXY_TO_NODE, null, null, null, null, null, payload, endpoint);
         }
+
     }
 }
