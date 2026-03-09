@@ -226,6 +226,67 @@ public class PanelAPI {
         stub.deleteFile(FilePathRequest.newBuilder().setServerId(serverId).setPath(path).build());
     }
 
+    public List<Mount> listMounts() {
+        ListMountsResponse resp = stub.listMounts(Empty.getDefaultInstance());
+        List<Mount> out = new ArrayList<>();
+        for (io.birdactyl.sdk.proto.Mount m : resp.getMountsList()) {
+            out.add(new Mount(m));
+        }
+        return out;
+    }
+
+    public Mount getMount(String id) {
+        return new Mount(stub.getMount(IDRequest.newBuilder().setId(id).build()));
+    }
+
+    public Mount createMount(String name, String description, String source, String target, boolean readOnly, boolean userMountable, boolean navigable) {
+        return new Mount(stub.createMount(CreateMountRequest.newBuilder()
+                .setName(name).setDescription(description).setSource(source).setTarget(target)
+                .setReadOnly(readOnly).setUserMountable(userMountable).setNavigable(navigable)
+                .build()));
+    }
+
+    public Mount updateMount(String id, String name, String description, String source, String target, Boolean readOnly, Boolean userMountable, Boolean navigable) {
+        UpdateMountRequest.Builder req = UpdateMountRequest.newBuilder().setId(id);
+        if (name != null) req.setName(name);
+        if (description != null) req.setDescription(description);
+        if (source != null) req.setSource(source);
+        if (target != null) req.setTarget(target);
+        if (readOnly != null) req.setReadOnly(readOnly);
+        if (userMountable != null) req.setUserMountable(userMountable);
+        if (navigable != null) req.setNavigable(navigable);
+        return new Mount(stub.updateMount(req.build()));
+    }
+
+    public void deleteMount(String id) {
+        stub.deleteMount(IDRequest.newBuilder().setId(id).build());
+    }
+
+    public void addMountToServer(String mountId, String serverId) {
+        stub.addMountToServer(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build());
+    }
+
+    public void removeMountFromServer(String mountId, String serverId) {
+        stub.removeMountFromServer(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build());
+    }
+
+    public List<ServerMountInfo> getServerMounts(String serverId) {
+        ServerMountsResponse resp = stub.getServerMounts(IDRequest.newBuilder().setId(serverId).build());
+        List<ServerMountInfo> out = new ArrayList<>();
+        for (io.birdactyl.sdk.proto.ServerMountInfo m : resp.getMountsList()) {
+            out.add(new ServerMountInfo(m));
+        }
+        return out;
+    }
+
+    public void mountServerMount(String mountId, String serverId) {
+        stub.mountServerMount(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build());
+    }
+
+    public void unmountServerMount(String mountId, String serverId) {
+        stub.unmountServerMount(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build());
+    }
+
     public void createFolder(String serverId, String path) {
         stub.createFolder(FilePathRequest.newBuilder().setServerId(serverId).setPath(path).build());
     }
@@ -504,6 +565,31 @@ public class PanelAPI {
         File(FileInfo f) {
             this.name = f.getName(); this.size = f.getSize(); this.isDir = f.getIsDir();
             this.modTime = f.getModified(); this.mime = f.getMime();
+        }
+    }
+
+    public static class Mount {
+        public final String id, name, description, source, target, createdAt;
+        public final boolean readOnly, userMountable, navigable;
+        public final List<String> serverIds, nodeIds, packageIds;
+
+        Mount(io.birdactyl.sdk.proto.Mount m) {
+            this.id = m.getId(); this.name = m.getName(); this.description = m.getDescription();
+            this.source = m.getSource(); this.target = m.getTarget(); this.readOnly = m.getReadOnly();
+            this.userMountable = m.getUserMountable(); this.navigable = m.getNavigable();
+            this.serverIds = m.getServerIdsList(); this.nodeIds = m.getNodeIdsList();
+            this.packageIds = m.getPackageIdsList(); this.createdAt = m.getCreatedAt();
+        }
+    }
+
+    public static class ServerMountInfo {
+        public final String id, name, description, source, target;
+        public final boolean readOnly, isMounted, navigable;
+
+        ServerMountInfo(io.birdactyl.sdk.proto.ServerMountInfo m) {
+            this.id = m.getId(); this.name = m.getName(); this.description = m.getDescription();
+            this.source = m.getSource(); this.target = m.getTarget(); this.readOnly = m.getReadOnly();
+            this.isMounted = m.getIsMounted(); this.navigable = m.getNavigable();
         }
     }
 

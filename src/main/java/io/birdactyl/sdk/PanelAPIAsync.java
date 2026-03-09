@@ -269,6 +269,59 @@ public class PanelAPIAsync {
         return toCompletableVoid(stub.deleteFile(FilePathRequest.newBuilder().setServerId(serverId).setPath(path).build()));
     }
 
+    public CompletableFuture<List<PanelAPI.Mount>> listMounts() {
+        return toCompletable(stub.listMounts(Empty.getDefaultInstance()),
+                resp -> resp.getMountsList().stream().map(PanelAPI.Mount::new).collect(Collectors.toList()));
+    }
+
+    public CompletableFuture<PanelAPI.Mount> getMount(String id) {
+        return toCompletable(stub.getMount(IDRequest.newBuilder().setId(id).build()), PanelAPI.Mount::new);
+    }
+
+    public CompletableFuture<PanelAPI.Mount> createMount(String name, String description, String source, String target, boolean readOnly, boolean userMountable, boolean navigable) {
+        return toCompletable(stub.createMount(CreateMountRequest.newBuilder()
+                .setName(name).setDescription(description).setSource(source).setTarget(target)
+                .setReadOnly(readOnly).setUserMountable(userMountable).setNavigable(navigable)
+                .build()), PanelAPI.Mount::new);
+    }
+
+    public CompletableFuture<PanelAPI.Mount> updateMount(String id, String name, String description, String source, String target, Boolean readOnly, Boolean userMountable, Boolean navigable) {
+        UpdateMountRequest.Builder req = UpdateMountRequest.newBuilder().setId(id);
+        if (name != null) req.setName(name);
+        if (description != null) req.setDescription(description);
+        if (source != null) req.setSource(source);
+        if (target != null) req.setTarget(target);
+        if (readOnly != null) req.setReadOnly(readOnly);
+        if (userMountable != null) req.setUserMountable(userMountable);
+        if (navigable != null) req.setNavigable(navigable);
+        return toCompletable(stub.updateMount(req.build()), PanelAPI.Mount::new);
+    }
+
+    public CompletableFuture<Void> deleteMount(String id) {
+        return toCompletableVoid(stub.deleteMount(IDRequest.newBuilder().setId(id).build()));
+    }
+
+    public CompletableFuture<Void> addMountToServer(String mountId, String serverId) {
+        return toCompletableVoid(stub.addMountToServer(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build()));
+    }
+
+    public CompletableFuture<Void> removeMountFromServer(String mountId, String serverId) {
+        return toCompletableVoid(stub.removeMountFromServer(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build()));
+    }
+
+    public CompletableFuture<List<PanelAPI.ServerMountInfo>> getServerMounts(String serverId) {
+        return toCompletable(stub.getServerMounts(IDRequest.newBuilder().setId(serverId).build()),
+                resp -> resp.getMountsList().stream().map(PanelAPI.ServerMountInfo::new).collect(Collectors.toList()));
+    }
+
+    public CompletableFuture<Void> mountServerMount(String mountId, String serverId) {
+        return toCompletableVoid(stub.mountServerMount(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build()));
+    }
+
+    public CompletableFuture<Void> unmountServerMount(String mountId, String serverId) {
+        return toCompletableVoid(stub.unmountServerMount(MountServerRequest.newBuilder().setMountId(mountId).setServerId(serverId).build()));
+    }
+
     public CompletableFuture<Void> createFolder(String serverId, String path) {
         return toCompletableVoid(stub.createFolder(FilePathRequest.newBuilder().setServerId(serverId).setPath(path).build()));
     }
